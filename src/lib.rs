@@ -1,27 +1,29 @@
 use regex::Regex;
 
 #[derive(Debug, PartialEq)]
-pub enum MacError {
+pub enum MacAddressError {
     InvalidLength(String),
     InvalidMac(String),
 }
 
-impl std::fmt::Display for MacError {
+impl std::fmt::Display for MacAddressError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            MacError::InvalidLength(a) => write!(f, "address: `{a}` is not 12 characters long",),
-            MacError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress",),
+            MacAddressError::InvalidLength(a) => {
+                write!(f, "address: `{a}` is not 12 characters long",)
+            }
+            MacAddressError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress",),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Mac {
-    pub address: String,
+pub struct MacAddress {
+    address: String,
 }
 
-impl Mac {
-    pub fn parse(address: &str) -> Result<Self, MacError> {
+impl MacAddress {
+    pub fn parse(address: &str) -> Result<Self, MacAddressError> {
         // matches 12x HEX chars
         let re = Regex::new(r"^[a-f0-9]{12}$").unwrap();
 
@@ -30,12 +32,12 @@ impl Mac {
 
         // confirm address length == 12
         if bare.chars().count() != 12 {
-            return Err(MacError::InvalidLength(address.to_owned()));
+            return Err(MacAddressError::InvalidLength(address.to_owned()));
         }
 
         // confirm address is made up of HEX chars
         if !re.is_match(&bare) {
-            return Err(MacError::InvalidMac(address.to_owned()));
+            return Err(MacAddressError::InvalidMac(address.to_owned()));
         }
 
         Ok(Self { address: bare })
@@ -125,7 +127,7 @@ impl Mac {
     }
 }
 
-impl std::fmt::Display for Mac {
+impl std::fmt::Display for MacAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.bare())
     }
@@ -171,7 +173,7 @@ mod tests {
     #[test]
     fn bare_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.address, "001122aabbcc".to_owned());
         }
     }
@@ -179,7 +181,7 @@ mod tests {
     #[test]
     fn eui_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.eui(), "00-11-22-aa-bb-cc".to_owned());
         }
     }
@@ -187,7 +189,7 @@ mod tests {
     #[test]
     fn hex_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.hex(), "00:11:22:aa:bb:cc".to_owned());
         }
     }
@@ -195,7 +197,7 @@ mod tests {
     #[test]
     fn dot_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.dot(), "0011.22aa.bbcc".to_owned());
         }
     }
@@ -203,7 +205,7 @@ mod tests {
     #[test]
     fn octets_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.octets(), vec!["00", "11", "22", "aa", "bb", "cc"]);
         }
     }
@@ -211,7 +213,7 @@ mod tests {
     #[test]
     fn bits_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(
                 mac.bits(),
                 vec![
@@ -225,7 +227,7 @@ mod tests {
     #[test]
     fn binary_mac_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(
                 mac.binary(),
                 "000000000001000100100010101010101011101111001100"
@@ -236,7 +238,7 @@ mod tests {
     #[test]
     fn oui_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.oui(), "001122".to_owned());
         }
     }
@@ -244,7 +246,7 @@ mod tests {
     #[test]
     fn nic_from_macs() {
         for m in test_macs() {
-            let mac = Mac::parse(m).unwrap();
+            let mac = MacAddress::parse(m).unwrap();
             assert_eq!(mac.nic(), "aabbcc".to_owned());
         }
     }
@@ -252,14 +254,14 @@ mod tests {
     #[test]
     fn parse_invalid_length_mac() {
         let address = "bgf";
-        let mac = Mac::parse(address).unwrap_err();
-        assert_eq!(MacError::InvalidLength(address.to_owned()), mac);
+        let mac = MacAddress::parse(address).unwrap_err();
+        assert_eq!(MacAddressError::InvalidLength(address.to_owned()), mac);
     }
 
     #[test]
     fn parse_invalid_mac() {
         let address = "xy-z1-23-bg-t7-89";
-        let mac = Mac::parse(address).unwrap_err();
-        assert_eq!(MacError::InvalidMac(address.to_owned()), mac);
+        let mac = MacAddress::parse(address).unwrap_err();
+        assert_eq!(MacAddressError::InvalidMac(address.to_owned()), mac);
     }
 }
