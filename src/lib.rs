@@ -44,7 +44,7 @@ impl MacAddress {
     }
 
     pub fn bare(&self) -> String {
-        format!("{}", self.address)
+        self.address.to_owned()
     }
 
     pub fn eui(&self) -> String {
@@ -109,7 +109,7 @@ impl MacAddress {
     }
 
     pub fn bits(&self) -> Vec<String> {
-        self.bare().chars().map(|c| to_binary(c)).collect()
+        self.bare().chars().map(to_binary).collect()
     }
 
     pub fn binary(&self) -> String {
