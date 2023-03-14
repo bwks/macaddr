@@ -13,7 +13,7 @@ impl std::fmt::Display for MacAddressError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             MacAddressError::InvalidLength(a) => {
-                write!(f, "address: `{a}` is not 12 characters long",)
+                write!(f, "address: `{a}` is not 12 characters long")
             }
             MacAddressError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress"),
         }
