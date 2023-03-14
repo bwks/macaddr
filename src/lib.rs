@@ -7,6 +7,7 @@ const MULTICAST_MAC: &str = "01005e";
 pub enum MacAddressError {
     InvalidLength(String),
     InvalidMac(String),
+    RegexError(String),
 }
 
 impl std::fmt::Display for MacAddressError {
@@ -16,6 +17,7 @@ impl std::fmt::Display for MacAddressError {
                 write!(f, "address: `{a}` is not 12 characters long")
             }
             MacAddressError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress"),
+            MacAddressError::RegexError(a) => write!(f, "error parsing regex for address: `{a}`"),
         }
     }
 }
@@ -28,7 +30,10 @@ pub struct MacAddress {
 impl MacAddress {
     pub fn parse(address: &str) -> Result<Self, MacAddressError> {
         // matches 12x HEX chars
-        let re = Regex::new(r"^[a-f0-9]{12}$").unwrap();
+        let re = match Regex::new(r"^[a-f0-9]{12}$") {
+            Ok(r) => r,
+            Err(_) => return Err(MacAddressError::RegexError(address.to_owned())),
+        };
 
         // get bare address by removing known MAC delimiters
         let bare = address
@@ -146,6 +151,14 @@ impl MacAddress {
             false => true,
         }
     }
+
+    pub fn eui64(&self) -> String {
+        invert_ul(self)
+    }
+
+    pub fn ipv6_link_local(&self) -> String {
+        format!("fe80{}", self.eui64())
+    }
 }
 
 impl std::fmt::Display for MacAddress {
@@ -177,6 +190,72 @@ fn hex_to_binary(c: char) -> String {
     s.to_owned()
 }
 
+fn binary_to_hex(s: &str) -> char {
+    match s {
+        "0000" => '0',
+        "0001" => '1',
+        "0010" => '2',
+        "0011" => '3',
+        "0100" => '4',
+        "0101" => '5',
+        "0110" => '6',
+        "0111" => '7',
+        "1000" => '8',
+        "1001" => '9',
+        "1010" => 'a',
+        "1011" => 'b',
+        "1100" => 'c',
+        "1101" => 'd',
+        "1110" => 'e',
+        "1111" => 'f',
+        _ => ' ',
+    }
+}
+
+// Returns a MAC address with the Universal/Local (U/L)
+// Bit inverted. The U/L bit is the 7th but in the first octet.
+// Reference RFC: http://www.faqs.org/rfcs/rfc2373.html
+//
+// The process to convert the MAC is as follows:
+// 1) Split the MAC address in the middle.
+// 00:15:2b <==> e4:9b:60
+//
+// 2) Insert ff:fe in the middle.
+// 00:15:2b:ff:fe:e4:9b:60
+//
+// 3) Convert the first eight bits to binary.
+// 00 -> 00000000
+//
+// 4) Invert the 7th bit.
+// 00000000 -> 00000010
+//
+// 5) Convert these first eight bits back into hex.
+// 00000010 -> 02, which yields an EUI-64 address of 02:15:2b:ff:fe:e4:9b:60
+fn invert_ul(mac: &MacAddress) -> String {
+    let mut bits = mac.bits();
+    let mut flipped_bit: Vec<String> = bits[1].chars().map(|i| i.to_string()).collect();
+
+    match flipped_bit[2] == "0" {
+        true => flipped_bit[2] = "1".to_owned(),
+        false => flipped_bit[2] = "0".to_owned(),
+    };
+
+    bits[1] = flipped_bit.join("");
+
+    let hex: Vec<char> = bits.iter().map(|s| binary_to_hex(s)).collect();
+
+    format!(
+        "{}{}{}{}{}{}fffe{}",
+        hex[0],
+        hex[1],
+        hex[2],
+        hex[3],
+        hex[4],
+        hex[5],
+        mac.nic()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,7 +276,7 @@ mod tests {
     fn bare_mac_from_macs() {
         for m in test_macs() {
             let mac = MacAddress::parse(m).unwrap();
-            assert_eq!(mac.address, "001122aabbcc".to_owned());
+            assert_eq!(mac.bare(), "001122aabbcc".to_owned());
         }
     }
 
@@ -317,5 +396,29 @@ mod tests {
             let mac = MacAddress::parse(tc.0).unwrap();
             assert!(mac.is_unicast() == tc.1)
         }
+    }
+
+    #[test]
+    fn eui64_0_to_1() {
+        let mac = MacAddress::parse("001122aabbcc").unwrap();
+        assert_eq!(mac.eui64(), "021122fffeaabbcc".to_owned());
+    }
+
+    #[test]
+    fn eui64_1_to_0() {
+        let mac = MacAddress::parse("021122aabbcc").unwrap();
+        assert_eq!(mac.eui64(), "001122fffeaabbcc".to_owned());
+    }
+
+    #[test]
+    fn ipv6_link_local_0_to_1() {
+        let mac = MacAddress::parse("001122aabbcc").unwrap();
+        assert_eq!(mac.ipv6_link_local(), "fe80021122fffeaabbcc".to_owned());
+    }
+
+    #[test]
+    fn ipv6_link_local_1_to_0() {
+        let mac = MacAddress::parse("021122aabbcc").unwrap();
+        assert_eq!(mac.ipv6_link_local(), "fe80001122fffeaabbcc".to_owned());
     }
 }
