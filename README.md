@@ -50,4 +50,10 @@ mac.binary() // 000000000001000100100010101010101011101111001100
 mac.oui() // 001122
 
 mac.nic() // aabbcc
+
+mac.is_unicast() // true
+
+mac.is_broadcast() // false
+
+mac.is_multicast() // false
 ```

@@ -1,5 +1,8 @@
 use regex::Regex;
 
+const BROADCAST_MAC: &str = "ffffffffffff";
+const MULTICAST_MAC: &str = "01005e";
+
 #[derive(Debug, PartialEq)]
 pub enum MacAddressError {
     InvalidLength(String),
@@ -12,7 +15,7 @@ impl std::fmt::Display for MacAddressError {
             MacAddressError::InvalidLength(a) => {
                 write!(f, "address: `{a}` is not 12 characters long",)
             }
-            MacAddressError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress",),
+            MacAddressError::InvalidMac(a) => write!(f, "address: `{a}` is not a MAC adddress"),
         }
     }
 }
@@ -109,7 +112,7 @@ impl MacAddress {
     }
 
     pub fn bits(&self) -> Vec<String> {
-        self.bare().chars().map(to_binary).collect()
+        self.bare().chars().map(hex_to_binary).collect()
     }
 
     pub fn binary(&self) -> String {
@@ -125,6 +128,21 @@ impl MacAddress {
         let v: Vec<String> = self.bare().chars().map(|s| s.to_string()).collect();
         v[6..=11].join("")
     }
+
+    pub fn is_broadcast(&self) -> bool {
+        self.bare() == BROADCAST_MAC
+    }
+
+    pub fn is_multicast(&self) -> bool {
+        self.oui() == MULTICAST_MAC
+    }
+
+    pub fn is_unicast(&self) -> bool {
+        match self.is_broadcast() || self.is_multicast() {
+            true => false,
+            false => true,
+        }
+    }
 }
 
 impl std::fmt::Display for MacAddress {
@@ -133,7 +151,7 @@ impl std::fmt::Display for MacAddress {
     }
 }
 
-fn to_binary(c: char) -> String {
+fn hex_to_binary(c: char) -> String {
     let s = match c {
         '0' => "0000",
         '1' => "0001",
@@ -263,5 +281,36 @@ mod tests {
         let address = "xy-z1-23-bg-t7-89";
         let mac = MacAddress::parse(address).unwrap_err();
         assert_eq!(MacAddressError::InvalidMac(address.to_owned()), mac);
+    }
+
+    #[test]
+    fn is_broadcast_mac() {
+        let test_cases = vec![("ffffffffffff", true), ("001122aabbcc", false)];
+        for tc in test_cases {
+            let mac = MacAddress::parse(tc.0).unwrap();
+            assert!(mac.is_broadcast() == tc.1)
+        }
+    }
+
+    #[test]
+    fn is_multicast_mac() {
+        let test_cases = vec![("01005eaabbcc", true), ("001122aabbcc", false)];
+        for tc in test_cases {
+            let mac = MacAddress::parse(tc.0).unwrap();
+            assert!(mac.is_multicast() == tc.1)
+        }
+    }
+
+    #[test]
+    fn is_unicast_mac() {
+        let test_cases = vec![
+            ("001122aabbcc", true),
+            ("01005eaabbcc", false),
+            ("ffffffffffff", false),
+        ];
+        for tc in test_cases {
+            let mac = MacAddress::parse(tc.0).unwrap();
+            assert!(mac.is_unicast() == tc.1)
+        }
     }
 }
