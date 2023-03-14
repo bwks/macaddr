@@ -31,7 +31,10 @@ impl MacAddress {
         let re = Regex::new(r"^[a-f0-9]{12}$").unwrap();
 
         // get bare address by removing known MAC delimiters
-        let bare = address.trim().replace([':', '-', '.'], "").to_lowercase();
+        let bare = address
+            .trim()
+            .replace([':', '-', '.', ' '], "")
+            .to_lowercase();
 
         // confirm address length == 12
         if bare.chars().count() != 12 {
@@ -184,7 +187,9 @@ mod tests {
             "00-11-22-aa-bb-cc",
             "0011.22aa.bbcc",
             "001122aabbcc",
+            "001122AABBCC",
             " 0011.22aa.bbcc ",
+            "00 11 22 AA BB CC",
         ]
     }
 
