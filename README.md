@@ -56,4 +56,12 @@ mac.is_unicast() // true
 mac.is_broadcast() // false
 
 mac.is_multicast() // false
+
+mac.is_local() // false
+
+mac.is_universal() // true
+
+mac.eui64() // 02-11-22-ff-fe-aa-bb-cc
+
+mac.ipv6_link_local() // fe80::0211:22ff:feaa:bbcc
 ```
