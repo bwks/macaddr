@@ -1,3 +1,5 @@
+use std::i64;
+
 #[derive(Debug, PartialEq)]
 pub enum MacAddressError {
     InvalidLength(String),
@@ -99,6 +101,13 @@ impl MacAddress {
     /// format `000000000001000100100010101010101011101111001100`
     pub fn binary(&self) -> String {
         self.bits().join("")
+    }
+
+    /// Returns the integer representation of the MAC address in the
+    /// format `73596058572`
+    pub fn int(&self) -> i64 {
+        // This should never fail with a valid MAC address
+        i64::from_str_radix(&self.raw(), 16).unwrap_or_default()
     }
 
     /// Returns the Organizationally Unique Identifier (OUI) portion of the
@@ -306,6 +315,14 @@ mod tests {
                 mac.binary(),
                 "000000000001000100100010101010101011101111001100"
             );
+        }
+    }
+
+    #[test]
+    fn int_from_macs() {
+        for m in test_macs() {
+            let mac = MacAddress::parse(m).unwrap();
+            assert_eq!(mac.int(), 73596058572);
         }
     }
 

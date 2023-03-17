@@ -23,7 +23,7 @@ fn main() -> Result<(), MacAddressError> {
     let mac = MacAddress::parse("00:11:22:aa:bb:cc")?;
 
     // Access Methods
-    println!("{}", mac.bare());
+    println!("{}", mac.raw());
 
     Ok(())
 }
@@ -33,7 +33,7 @@ fn main() -> Result<(), MacAddressError> {
 A `MacAddress` instance has the following methods.
 
 ```rust
-mac.bare() // 001122aabbcc
+mac.raw() // 001122aabbcc
 
 mac.eui() // 00-11-22-aa-bb-cc
 
@@ -46,6 +46,8 @@ mac.octets() // ["00", "11", "22", "aa", "bb", "cc"]
 mac.bits() // ["0000", "0000", "0001", "0001", "0010", "0010", "1010", "1010", "1011", "1011", "1100", "1100"]
 
 mac.binary() // 000000000001000100100010101010101011101111001100
+
+mac.int() // 73596058572
 
 mac.oui() // 001122
 
